@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tạo Sách Lật Tương Tác - PDF Flipbook</title>
+    <link rel="stylesheet" href="assets/flipbook.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        #upload-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .upload-container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        .upload-container h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .upload-container p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 50px 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            background: #eef0ff;
+            border-color: #764ba2;
+        }
+
+        .upload-area.dragover {
+            background: #e0e5ff;
+            border-color: #764ba2;
+        }
+
+        .upload-icon {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+
+        .upload-area h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .upload-area span {
+            color: #888;
+            font-size: 14px;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        #flipbook-screen {
+            display: none;
+            width: 100%;
+            height: 100vh;
+        }
+
+        #flipbook-screen.show {
+            display: block;
+        }
+
+        #upload-screen.hide {
+            display: none;
+        }
+
+        .back-btn {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 9999;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .back-btn:hover {
+            background: white;
+            transform: scale(1.05);
+        }
+
+        #my-flipbook {
+            width: 100%;
+            height: 100vh;
+        }
+
+        .settings-panel {
+            background: #f8f9ff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: left;
+        }
+
+        .settings-panel h3 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .setting-row:last-child {
+            border-bottom: none;
+        }
+
+        .setting-row label {
+            color: #555;
+            font-size: 14px;
+        }
+
+        .setting-row select,
+        .setting-row input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .setting-row select {
+            padding: 8px 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+
+        .features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .feature {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .feature-icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+
+        .feature h4 {
+            color: #333;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div id="upload-screen">
+        <div class="upload-container">
+            <h1>📚 Tạo Sách Lật Tương Tác</h1>
+            <p>Chuyển đổi file PDF thành sách lật 3D đẹp mắt</p>
+
+            <div class="upload-area" id="upload-area">
+                <div class="upload-icon">📄</div>
+                <h3>Kéo thả file PDF vào đây</h3>
+                <span>hoặc click để chọn file</span>
+                <input type="file" id="file-input" accept=".pdf">
+            </div>
+
+            <div class="file-info" id="file-info">
+                <strong>📎 File đã chọn:</strong> <span id="file-name"></span>
+            </div>
+
+            <div class="settings-panel">
+                <h3>⚙️ Cài đặt hiển thị</h3>
+                <div class="setting-row">
+                    <label>Hiệu ứng 3D:</label>
+                    <input type="checkbox" id="enable3d" checked>
+                </div>
+                <div class="setting-row">
+                    <label>Âm thanh lật trang:</label>
+                    <input type="checkbox" id="enableSound" checked>
+                </div>
+                <div class="setting-row">
+                    <label>Chế độ hiển thị:</label>
+                    <select id="pageMode">
+                        <option value="auto">Tự động</option>
+                        <option value="single">Trang đơn</option>
+                        <option value="double">Trang đôi</option>
+                    </select>
+                </div>
+                <div class="setting-row">
+                    <label>Bìa cứng 3D:</label>
+                    <select id="hardPages">
+                        <option value="none">Không</option>
+                        <option value="cover">Chỉ bìa</option>
+                        <option value="all">Tất cả trang</option>
+                    </select>
+                </div>
+            </div>
+
+            <button class="btn" id="create-btn" disabled>🚀 Tạo Sách Lật</button>
+
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <span>Đang tạo sách lật...</span>
+            </div>
+
+            <div class="features">
+                <div class="feature">
+                    <div class="feature-icon">🔄</div>
+                    <h4>Hiệu ứng lật 3D</h4>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🔍</div>
+                    <h4>Phóng to thu nhỏ</h4>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">📱</div>
+                    <h4>Tương thích mobile</h4>
+                </div>
+                <div class="feature">
+                    <div class="feature-icon">🖨️</div>
+                    <h4>In & Tải xuống</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="flipbook-screen">
+        <button class="back-btn" id="back-btn">← Quay lại</button>
+        <div id="my-flipbook"></div>
+    </div>
+
+    <script src="assets/jquery.min.js"></script>
+    <script src="assets/three.min.js"></script>
+    <script src="assets/pdf.min.js"></script>
+    <script src="assets/flipbook.js"></script>
+
+    <script>
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/pdf.worker.min.js';
+        }
+
+        let selectedFile = null;
+        let flipbookInstance = null;
+
+        const uploadArea = document.getElementById('upload-area');
+        const fileInput = document.getElementById('file-input');
+        const fileInfo = document.getElementById('file-info');
+        const fileName = document.getElementById('file-name');
+        const createBtn = document.getElementById('create-btn');
+        const loading = document.getElementById('loading');
+        const uploadScreen = document.getElementById('upload-screen');
+        const flipbookScreen = document.getElementById('flipbook-screen');
+        const backBtn = document.getElementById('back-btn');
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type === 'application/pdf') {
+                handleFile(files[0]);
+            } else {
+                alert('Vui lòng chọn file PDF!');
+            }
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            selectedFile = file;
+            fileName.textContent = file.name + ' (' + formatFileSize(file.size) + ')';
+            fileInfo.classList.add('show');
+            createBtn.disabled = false;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        createBtn.addEventListener('click', () => {
+            if (!selectedFile) return;
+
+            loading.classList.add('show');
+            createBtn.disabled = true;
+
+            const fileURL = URL.createObjectURL(selectedFile);
+
+            setTimeout(() => {
+                createFlipbook(fileURL);
+            }, 500);
+        });
+
+        function createFlipbook(pdfUrl) {
+            const is3D = document.getElementById('enable3d').checked;
+            const enableSound = document.getElementById('enableSound').checked;
+            const pageMode = document.getElementById('pageMode').value;
+            const hardPages = document.getElementById('hardPages').value;
+
+            let pageModeValue = TPDFFLIP.PAGE_MODE.AUTO;
+            if (pageMode === 'single') pageModeValue = TPDFFLIP.PAGE_MODE.SINGLE;
+            if (pageMode === 'double') pageModeValue = TPDFFLIP.PAGE_MODE.DOUBLE;
+
+            const options = {
+                pdfUrl: pdfUrl,
+                openPage: 1,
+                zoomRatio: 2,
+                is3D: is3D,
+                has3DShadow: is3D,
+                height: "100vh",
+                paddingTop: 40,
+                paddingLeft: 45,
+                paddingRight: 45,
+                paddingBottom: 40,
+                backgroundColor: "#1a1a2e",
+                backgroundImage: "assets/bg.jpg",
+                flexibility: 0.9,
+                duration: 800,
+                autoPlay: true,
+                autoPlayDuration: 2000,
+                autoPlayStart: false,
+                direction: TPDFFLIP.DIRECTION.LTR,
+                enableSound: enableSound,
+                soundFile: "assets/turn2.mp3",
+                showSearchControl: true,
+                showPrintControl: true,
+                enableDownload: true,
+                autoOpenOutline: false,
+                autoOpenThumbnail: false,
+                controlsFloating: false,
+                controlsPosition: TPDFFLIP.CONTROLSPOSITION.BOTTOM,
+                allControls: "more,play,outline,thumbnail,altPrev,zoomIn,zoomOut,startPage,pageNumber,endPage,altNext,fullScreen,share,download,print,sound,search",
+                moreControls: "startPage,endPage,play,thumbnail,print",
+                hideControls: "",
+                pageMode: pageModeValue,
+                singlePageMode: TPDFFLIP.SINGLE_PAGE_MODE.AUTO,
+                pageSize: TPDFFLIP.FLIPBOOK_PAGE_SIZE.AUTO,
+                hasSpiral: false,
+                scrollWheel: true,
+                mouseScrollAction: TPDFFLIP.MOUSE_SCROLL_ACTIONS.ZOOM,
+                flipbookHardPages: hardPages,
+                cover3DType: TPDFFLIP.FLIPBOOK_COVER_TYPE.NONE
+            };
+
+            uploadScreen.classList.add('hide');
+            flipbookScreen.classList.add('show');
+            loading.classList.remove('show');
+
+            try {
+                flipbookInstance = $('#my-flipbook').flipBook(options);
+            } catch (error) {
+                console.error('Lỗi tạo flipbook:', error);
+                alert('Có lỗi xảy ra khi tạo sách lật. Vui lòng thử lại!');
+                backBtn.click();
+            }
+        }
+
+        backBtn.addEventListener('click', () => {
+            flipbookScreen.classList.remove('show');
+            uploadScreen.classList.remove('hide');
+            createBtn.disabled = false;
+
+            if (flipbookInstance) {
+                $('#my-flipbook').empty();
+                flipbookInstance = null;
+            }
+        });
+    </script>
+</body>
+</html>
